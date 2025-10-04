@@ -1,0 +1,84 @@
+const mongoose = require('mongoose');
+
+mongoose.connect('mongodb://localhost:27017/ecommerceDB', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log('MongoDB connected'))
+.catch(err => console.error(err));
+
+const variantSchema = new mongoose.Schema({
+  color: String,
+  size: String,
+  stock: Number
+});
+
+const productSchema = new mongoose.Schema({
+  name: String,
+  price: Number,
+  category: String,
+  variants: [variantSchema]
+});
+
+const Product = mongoose.model('Product', productSchema);
+
+// Mongoose Operations
+async function runMongooseDemo() {
+  try {
+    await Product.deleteMany({});
+
+    await Product.insertMany([
+      {
+        name: 'T-Shirt',
+        price: 499,
+        category: 'Clothing',
+        variants: [
+          { color: 'Red', size: 'M', stock: 10 },
+          { color: 'Blue', size: 'L', stock: 5 }
+        ]
+      },
+      {
+        name: 'Sneakers',
+        price: 2999,
+        category: 'Footwear',
+        variants: [
+          { color: 'White', size: '9', stock: 15 },
+          { color: 'Black', size: '10', stock: 8 }
+        ]
+      }
+    ]);
+
+    // Retrieve all products
+    const allProducts = await Product.find();
+    console.log('All Products:', allProducts);
+
+    // Filter by category
+    const clothingProducts = await Product.find({ category: 'Clothing' });
+    console.log('Clothing Products:', clothingProducts);
+
+    // Project only name and variants
+    const productVariants = await Product.find({}, { name: 1, variants: 1, _id: 0 });
+    console.log('Product Variants:', productVariants);
+
+    // Update a nested variant stock
+    await Product.updateOne(
+      { name: 'T-Shirt', 'variants.color': 'Red' },
+      { $set: { 'variants.$.stock': 20 } }
+    );
+
+    const updatedTshirt = await Product.findOne({ name: 'T-Shirt' });
+    console.log('Updated T-Shirt Variants:', updatedTshirt.variants);
+
+    // Delete a product
+    await Product.deleteOne({ name: 'Sneakers' });
+    const finalProducts = await Product.find();
+    console.log('Final Products:', finalProducts);
+
+  } catch (err) {
+    console.error(err);
+  } finally {
+    mongoose.connection.close();
+  }
+}
+
+runMongooseDemo();
